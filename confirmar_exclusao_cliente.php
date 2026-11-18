@@ -2,16 +2,14 @@
 
 include("config/conexao.php");
 
-if (!isset($_GET["id"]) || !is_numeric($_GET["id"])) {
+if (!isset($_GET["id"]) || !Database::isUuid(trim((string) $_GET["id"]))) {
 
     header("Location: index.php?pagina=clientes");
     exit;
 
 }
 
-$id = (int)$_GET["id"];
-
-// Busca o cliente
+$id = trim((string) $_GET["id"]);
 
 $stmt = $conexao->prepare("
 SELECT
@@ -24,7 +22,7 @@ WHERE id = ?
 LIMIT 1
 ");
 
-$stmt->bind_param("i", $id);
+$stmt->bind_param("s", $id);
 
 $stmt->execute();
 
@@ -40,23 +38,19 @@ $cliente = $resultado->fetch_assoc();
 
 $stmt->close();
 
-// Conta empréstimos
-
 $stmt = $conexao->prepare("
 SELECT COUNT(*) total
 FROM emprestimos
 WHERE cliente_id = ?
 ");
 
-$stmt->bind_param("i", $id);
+$stmt->bind_param("s", $id);
 
 $stmt->execute();
 
 $totalEmprestimos = $stmt->get_result()->fetch_assoc()["total"];
 
 $stmt->close();
-
-// Conta parcelas
 
 $stmt = $conexao->prepare("
 SELECT COUNT(*) total
@@ -69,15 +63,13 @@ ON e.id = p.emprestimo_id
 WHERE e.cliente_id = ?
 ");
 
-$stmt->bind_param("i", $id);
+$stmt->bind_param("s", $id);
 
 $stmt->execute();
 
 $totalParcelas = $stmt->get_result()->fetch_assoc()["total"];
 
 $stmt->close();
-
-// Conta parcelas pagas
 
 $stmt = $conexao->prepare("
 SELECT COUNT(*) total
@@ -92,7 +84,7 @@ WHERE e.cliente_id = ?
 AND p.data_pagamento IS NOT NULL
 ");
 
-$stmt->bind_param("i", $id);
+$stmt->bind_param("s", $id);
 
 $stmt->execute();
 
@@ -394,23 +386,18 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
 
         try{
 
-            // Exclui parcelas
-
             $stmt = $conexao->prepare("
-            DELETE p
-            FROM parcelas p
-            INNER JOIN emprestimos e
-            ON e.id = p.emprestimo_id
-            WHERE e.cliente_id = ?
+            DELETE FROM parcelas
+            WHERE emprestimo_id IN (
+                SELECT id FROM emprestimos WHERE cliente_id = ?
+            )
             ");
 
-            $stmt->bind_param("i",$id);
+            $stmt->bind_param("s",$id);
 
             $stmt->execute();
 
             $stmt->close();
-
-            // Exclui empréstimos
 
             $stmt = $conexao->prepare("
             DELETE
@@ -418,12 +405,11 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
             WHERE cliente_id = ?
             ");
 
-            $stmt->bind_param("i",$id);
+            $stmt->bind_param("s",$id);
 
             $stmt->execute();
 
             $stmt->close();
-                        // Exclui o cliente
 
             $stmt = $conexao->prepare("
             DELETE
@@ -431,13 +417,11 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
             WHERE id = ?
             ");
 
-            $stmt->bind_param("i", $id);
+            $stmt->bind_param("s", $id);
 
             $stmt->execute();
 
             $stmt->close();
-
-            // Confirma a transação
 
             $conexao->commit();
 

@@ -1,0 +1,10 @@
+Options -Indexes
+<FilesMatch "^\.env(\..*)?$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "\.(sql|zip|7z|md|log|ini|bak)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^(salvar_cliente|salvar_emprestimo|salvar_pagamento|excluir_cliente|confirmar_exclusao_cliente|atualizar_cliente|teste_postgres)\.php$">
+    Require all denied
+</FilesMatch>

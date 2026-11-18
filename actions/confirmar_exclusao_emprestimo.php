@@ -4,22 +4,14 @@ session_start();
 
 require_once("../config/conexao.php");
 
-// ======================================
-// VERIFICA O ID
-// ======================================
-
-if (!isset($_GET["id"]) || !is_numeric($_GET["id"])) {
+if (!isset($_GET["id"]) || !Database::isUuid(trim((string) $_GET["id"]))) {
 
     header("Location: ../index.php?pagina=emprestimos");
     exit;
 
 }
 
-$id = (int) $_GET["id"];
-
-// ======================================
-// BUSCA O EMPRÉSTIMO
-// ======================================
+$id = trim((string) $_GET["id"]);
 
 $stmt = $conexao->prepare("
 SELECT
@@ -41,7 +33,7 @@ WHERE e.id = ?
 LIMIT 1
 ");
 
-$stmt->bind_param("i",$id);
+$stmt->bind_param("s",$id);
 
 $stmt->execute();
 
@@ -56,10 +48,6 @@ if($resultado->num_rows == 0){
 $emprestimo = $resultado->fetch_assoc();
 
 $stmt->close();
-
-// ======================================
-// AINDA NÃO CONFIRMOU
-// ======================================
 
 if($_SERVER["REQUEST_METHOD"] != "POST"){
 
@@ -279,10 +267,6 @@ exit;
 
 }
 
-// ======================================
-// VALIDA A CONFIRMAÇÃO
-// ======================================
-
 if(
 !isset($_POST["confirmacao"]) ||
 strtoupper(trim($_POST["confirmacao"])) != "EXCLUIR"
@@ -388,10 +372,6 @@ exit;
 
 }
 
-// ======================================
-// EXECUTA A EXCLUSÃO
-// ======================================
-
 $conexao->begin_transaction();
 
 try{
@@ -402,7 +382,7 @@ FROM parcelas
 WHERE emprestimo_id = ?
 ");
 
-$stmt->bind_param("i",$id);
+$stmt->bind_param("s",$id);
 
 $stmt->execute();
 
@@ -414,7 +394,7 @@ FROM emprestimos
 WHERE id = ?
 ");
 
-$stmt->bind_param("i",$id);
+$stmt->bind_param("s",$id);
 
 $stmt->execute();
 

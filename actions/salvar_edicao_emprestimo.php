@@ -1,253 +1,131 @@
 <?php
 
-include("../config/conexao.php");
+require_once __DIR__ . '/../config/conexao.php';
 
-if ($_SERVER["REQUEST_METHOD"] != "POST") {
-    header("Location: ../index.php");
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: ../index.php?pagina=emprestimos');
     exit;
 }
 
-$id = intval($_POST["id"]);
-$cliente_id = intval($_POST["cliente_id"]);
-$valor_emprestado = floatval($_POST["valor_emprestado"]);
-$juros = floatval($_POST["juros"]);
-$quantidade_parcelas = intval($_POST["quantidade_parcelas"]);
-$primeiro_vencimento = $_POST["primeiro_vencimento"];
-$observacoes = trim($_POST["observacoes"]);
+$id = trim((string) ($_POST['id'] ?? ''));
+$clienteId = trim((string) ($_POST['cliente_id'] ?? ''));
+$valorEmprestado = (float) ($_POST['valor_emprestado'] ?? 0);
+$juros = (float) ($_POST['juros'] ?? 0);
+$quantidadeParcelas = (int) ($_POST['quantidade_parcelas'] ?? 0);
+$primeiroVencimento = trim((string) ($_POST['primeiro_vencimento'] ?? ''));
+$observacoes = trim((string) ($_POST['observacoes'] ?? ''));
 
-// ===========================
-// Validações
-// ===========================
+$dataValida = DateTime::createFromFormat('!Y-m-d', $primeiroVencimento);
 
 if (
-    $cliente_id <= 0 ||
-    $valor_emprestado <= 0 ||
+    !Database::isUuid($id) ||
+    !Database::isUuid($clienteId) ||
+    $valorEmprestado <= 0 ||
     $juros < 0 ||
-    $quantidade_parcelas <= 0 ||
-    empty($primeiro_vencimento)
+    $quantidadeParcelas < 1 ||
+    $quantidadeParcelas > 600 ||
+    !$dataValida ||
+    $dataValida->format('Y-m-d') !== $primeiroVencimento
 ) {
-
-    die("Dados inválidos.");
-
+    http_response_code(422);
+    exit('Dados inválidos.');
 }
 
-// ===========================
-// Inicia Transação
-// ===========================
+$valorTotal = round($valorEmprestado + ($valorEmprestado * ($juros / 100)), 2);
+$valorParcela = round($valorTotal / $quantidadeParcelas, 2);
 
 $conexao->begin_transaction();
 
-try{
-
-    // ===========================
-    // Verifica parcelas pagas
-    // ===========================
-
-    $sql = "
-    SELECT COUNT(*) AS total
-    FROM parcelas
-    WHERE emprestimo_id = ?
-    AND data_pagamento IS NOT NULL
-    ";
-
-    $stmt = $conexao->prepare($sql);
-    $stmt->bind_param("i",$id);
+try {
+    $stmt = $conexao->prepare(
+        'SELECT COUNT(*) AS total FROM parcelas WHERE emprestimo_id = ? AND data_pagamento IS NOT NULL'
+    );
+    $stmt->bind_param('s', $id);
     $stmt->execute();
+    $parcelasPagas = (int) $stmt->get_result()->fetch_assoc()['total'];
 
-    $parcelasPagas =
-    $stmt
-    ->get_result()
-    ->fetch_assoc()["total"];
-
-    // ===========================
-    // Caso existam parcelas pagas
-    // Apenas observações
-    // ===========================
-
-    if($parcelasPagas > 0){
-
-        $sql = "
-        UPDATE emprestimos
-        SET observacoes = ?
-        WHERE id = ?
-        ";
-
-        $stmt = $conexao->prepare($sql);
-        $stmt->bind_param("si",$observacoes,$id);
+    if ($parcelasPagas > 0) {
+        $stmt = $conexao->prepare('UPDATE emprestimos SET observacoes = ? WHERE id = ?');
+        $stmt->bind_param('ss', $observacoes, $id);
         $stmt->execute();
 
         $conexao->commit();
-
-        header("Location: ../index.php?pagina=visualizar_emprestimo&id=".$id);
-
+        header('Location: ../index.php?pagina=visualizar_emprestimo&id=' . rawurlencode($id));
         exit;
-
     }
 
-    // ===========================
-    // Recalcula contrato
-    // ===========================
-
-    $valor_total =
-    $valor_emprestado +
-    ($valor_emprestado * ($juros / 100));
-
-    $valor_total =
-    round($valor_total,2);
-
-    $valor_parcela =
-    round(
-        $valor_total /
-        $quantidade_parcelas,
-        2
+    $stmt = $conexao->prepare(
+        'UPDATE emprestimos
+         SET cliente_id = ?, valor_emprestado = ?, juros = ?, quantidade_parcelas = ?,
+             valor_total = ?, valor_parcela = ?, primeiro_vencimento = ?, observacoes = ?
+         WHERE id = ?'
     );
-
-    // ===========================
-    // Atualiza empréstimo
-    // ===========================
-
-    $sql = "
-    UPDATE emprestimos
-    SET
-
-    cliente_id=?,
-    valor_emprestado=?,
-    juros=?,
-    quantidade_parcelas=?,
-    valor_total=?,
-    valor_parcela=?,
-    primeiro_vencimento=?,
-    observacoes=?
-
-    WHERE id=?
-    ";
-
-    $stmt = $conexao->prepare($sql);
-
     $stmt->bind_param(
-
-        "iddiddssi",
-
-        $cliente_id,
-        $valor_emprestado,
+        'sddiddsss',
+        $clienteId,
+        $valorEmprestado,
         $juros,
-        $quantidade_parcelas,
-        $valor_total,
-        $valor_parcela,
-        $primeiro_vencimento,
+        $quantidadeParcelas,
+        $valorTotal,
+        $valorParcela,
+        $primeiroVencimento,
         $observacoes,
         $id
-
     );
-
     $stmt->execute();
 
-    // ===========================
-    // Descobre quantas parcelas
-    // já foram pagas
-    // ===========================
-
-    $sql = "
-    SELECT COUNT(*) AS total
-    FROM parcelas
-    WHERE emprestimo_id = ?
-    AND data_pagamento IS NOT NULL
-    ";
-
-    $stmt = $conexao->prepare($sql);
-    $stmt->bind_param("i",$id);
+    $stmt = $conexao->prepare(
+        'SELECT id FROM parcelas WHERE emprestimo_id = ? ORDER BY numero_parcela'
+    );
+    $stmt->bind_param('s', $id);
     $stmt->execute();
-
-    $numero =
-    $stmt
-    ->get_result()
-    ->fetch_assoc()["total"] + 1;
-
-    // ===========================
-    // Ajusta data inicial
-    // ===========================
-
-    $data = new DateTime($primeiro_vencimento);
-
-    for($i = 1; $i < $numero; $i++){
-
-        $data->modify("+1 month");
-
-    }
-
-    // ===========================
-    // Busca parcelas pendentes
-    // ===========================
-
-    $sql = "
-    SELECT id
-    FROM parcelas
-    WHERE emprestimo_id = ?
-    AND data_pagamento IS NULL
-    ORDER BY numero_parcela
-    ";
-
-    $stmt = $conexao->prepare($sql);
-    $stmt->bind_param("i",$id);
-    $stmt->execute();
-
     $resultado = $stmt->get_result();
 
-    while($parcela = $resultado->fetch_assoc()){
-
-        $vencimento =
-        $data->format("Y-m-d");
-
-        $sqlUpdate = "
-        UPDATE parcelas
-
-        SET
-
-        numero_parcela=?,
-        valor_parcela=?,
-        vencimento=?
-
-        WHERE id=?
-        ";
-
-        $stmtUpdate =
-        $conexao->prepare($sqlUpdate);
-
-        $stmtUpdate->bind_param(
-
-            "idsi",
-
-            $numero,
-            $valor_parcela,
-            $vencimento,
-            $parcela["id"]
-
-        );
-
-        $stmtUpdate->execute();
-
-        $numero++;
-
-        $data->modify("+1 month");
-
+    $idsExistentes = [];
+    while ($parcela = $resultado->fetch_assoc()) {
+        $idsExistentes[] = (string) $parcela['id'];
     }
 
-    // ===========================
-    // Finaliza
-    // ===========================
+    $data = new DateTime($primeiroVencimento);
+
+    for ($numero = 1; $numero <= $quantidadeParcelas; $numero++) {
+        $vencimento = $data->format('Y-m-d');
+        $valorAtual = $numero === $quantidadeParcelas
+            ? round($valorTotal - ($valorParcela * ($quantidadeParcelas - 1)), 2)
+            : $valorParcela;
+
+        if (isset($idsExistentes[$numero - 1])) {
+            $parcelaId = $idsExistentes[$numero - 1];
+            $stmtUpdate = $conexao->prepare(
+                'UPDATE parcelas SET numero_parcela = ?, valor_parcela = ?, vencimento = ? WHERE id = ?'
+            );
+            $stmtUpdate->bind_param('idss', $numero, $valorAtual, $vencimento, $parcelaId);
+            $stmtUpdate->execute();
+        } else {
+            $stmtInsert = $conexao->prepare(
+                'INSERT INTO parcelas (emprestimo_id, numero_parcela, valor_parcela, vencimento) VALUES (?, ?, ?, ?)'
+            );
+            $stmtInsert->bind_param('sids', $id, $numero, $valorAtual, $vencimento);
+            $stmtInsert->execute();
+        }
+
+        $data->modify('+1 month');
+    }
+
+    if (count($idsExistentes) > $quantidadeParcelas) {
+        for ($i = $quantidadeParcelas; $i < count($idsExistentes); $i++) {
+            $stmtDelete = $conexao->prepare('DELETE FROM parcelas WHERE id = ?');
+            $stmtDelete->bind_param('s', $idsExistentes[$i]);
+            $stmtDelete->execute();
+        }
+    }
 
     $conexao->commit();
-
-    header("Location: ../index.php?pagina=visualizar_emprestimo&id=".$id);
-
+    header('Location: ../index.php?pagina=visualizar_emprestimo&id=' . rawurlencode($id));
     exit;
-
-}catch(Exception $e){
-
+} catch (Throwable $exception) {
     $conexao->rollback();
-
-    die("Erro ao atualizar empréstimo: ".$e->getMessage());
-
+    error_log('[SistemaFinanceiro] Erro ao editar empréstimo: ' . $exception->getMessage());
+    http_response_code(500);
+    exit('Não foi possível atualizar o empréstimo. Consulte o log do PHP.');
 }
-
-?>

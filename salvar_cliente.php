@@ -2,116 +2,77 @@
 
 include("config/conexao.php");
 
-$nome = $_POST["nome"];
-$cpf = $_POST["cpf"];
-$rg = $_POST["rg"];
-$telefone = $_POST["telefone"];
-$whatsapp = $_POST["whatsapp"];
-$email = $_POST["email"];
-$cep = $_POST["cep"];
-$rua = $_POST["rua"];
-$numero = $_POST["numero"];
-$bairro = $_POST["bairro"];
-$cidade = $_POST["cidade"];
-$estado = $_POST["estado"];
-$observacoes = $_POST["observacoes"];
+$nome = trim((string) ($_POST["nome"] ?? ""));
+$cpf = trim((string) ($_POST["cpf"] ?? ""));
+$rg = trim((string) ($_POST["rg"] ?? ""));
+$telefone = trim((string) ($_POST["telefone"] ?? ""));
+$whatsapp = trim((string) ($_POST["whatsapp"] ?? ""));
+$email = trim((string) ($_POST["email"] ?? ""));
+$cep = trim((string) ($_POST["cep"] ?? ""));
+$rua = trim((string) ($_POST["rua"] ?? ""));
+$numero = trim((string) ($_POST["numero"] ?? ""));
+$bairro = trim((string) ($_POST["bairro"] ?? ""));
+$cidade = trim((string) ($_POST["cidade"] ?? ""));
+$estado = trim((string) ($_POST["estado"] ?? ""));
+$observacoes = trim((string) ($_POST["observacoes"] ?? ""));
 
-if (!empty($cpf)) {
+if ($nome === "") {
+    http_response_code(422);
+    exit('O nome do cliente é obrigatório.');
+}
 
-    $sql = "SELECT id FROM clientes WHERE cpf = ?";
-
-    $stmt = $conexao->prepare($sql);
-
+if ($cpf !== "") {
+    $stmt = $conexao->prepare("SELECT id FROM clientes WHERE cpf = ? LIMIT 1");
     $stmt->bind_param("s", $cpf);
-
     $stmt->execute();
 
-    $resultado = $stmt->get_result();
-
-    if ($resultado->num_rows > 0) {
-
-        echo "
-        <div style='max-width:600px;margin:50px auto;padding:20px;background:#ffe5e5;border:1px solid #ff4d4d;border-radius:8px;font-family:Arial'>
+    if ($stmt->get_result()->num_rows > 0) {
+        echo "<div style='max-width:600px;margin:50px auto;padding:20px;background:#ffe5e5;border:1px solid #ff4d4d;border-radius:8px;font-family:Arial'>
             <h2>CPF já cadastrado!</h2>
             <p>Já existe um cliente utilizando este CPF.</p>
-            <br>
-            <a href='javascript:history.back()'>Voltar</a>
+            <br><a href='javascript:history.back()'>Voltar</a>
         </div>";
-
         exit;
-
     }
-
 }
 
 $sql = "INSERT INTO clientes
 (nome, cpf, rg, telefone, whatsapp, email, cep, rua, numero, bairro, cidade, estado, observacoes)
-VALUES
-(?,?,?,?,?,?,?,?,?,?,?,?,?)";
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-$stmt = $conexao->prepare($sql);
-
-$stmt->bind_param(
-"sssssssssssss",
-$nome,
-$cpf,
-$rg,
-$telefone,
-$whatsapp,
-$email,
-$cep,
-$rua,
-$numero,
-$bairro,
-$cidade,
-$estado,
-$observacoes
-);
-
-if ($stmt->execute()) {
+try {
+    $stmt = $conexao->prepare($sql);
+    $stmt->bind_param(
+        "sssssssssssss",
+        $nome,
+        $cpf,
+        $rg,
+        $telefone,
+        $whatsapp,
+        $email,
+        $cep,
+        $rua,
+        $numero,
+        $bairro,
+        $cidade,
+        $estado,
+        $observacoes
+    );
+    $stmt->execute();
 
     header("Location: index.php?pagina=clientes");
     exit;
-
-} else {
-
-    if ($conexao->errno == 1062) {
-
-        echo "
-        <div style='
-            max-width:600px;
-            margin:50px auto;
-            padding:20px;
-            border-radius:10px;
-            background:#ffe5e5;
-            border:1px solid #ff6b6b;
-            font-family:Arial;
-        '>
-
+} catch (PDOException $exception) {
+    if (($exception->errorInfo[0] ?? $exception->getCode()) === '23505') {
+        echo "<div style='max-width:600px;margin:50px auto;padding:20px;border-radius:10px;background:#ffe5e5;border:1px solid #ff6b6b;font-family:Arial'>
             <h3>CPF já cadastrado.</h3>
-
             <p>Já existe um cliente utilizando esse CPF.</p>
-
-            <br>
-
-            <a href='javascript:history.back()'
-               style='
-                    padding:10px 20px;
-                    background:#0d6efd;
-                    color:white;
-                    text-decoration:none;
-                    border-radius:6px;
-               '>
-
-                Voltar
-
-            </a>
-
+            <br><a href='javascript:history.back()'>Voltar</a>
         </div>";
-    } else {
-
-        echo "Erro: " . $conexao->error;
-
+        exit;
     }
 
+    error_log('[SistemaFinanceiro] Erro ao cadastrar cliente: ' . $exception->getMessage());
+    http_response_code(500);
+    exit('Não foi possível cadastrar o cliente. Consulte o log do PHP.');
 }

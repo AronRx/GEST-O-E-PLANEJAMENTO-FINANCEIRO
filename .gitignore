@@ -1,16 +1,16 @@
-# Configurações locais
 .env
+.env.*
+!.env.example
 
-# Dependências
 /vendor/
+/node_modules/
+/storage/logs/
+*.log
 
-# Uploads gerados localmente
 /uploads/*
 !/uploads/.gitkeep
 
-# Configurações do VS Code
 .vscode/
 
-# Sistema operacional
-Thumbs.db
 .DS_Store
+Thumbs.db
