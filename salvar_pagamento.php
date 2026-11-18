@@ -2,7 +2,11 @@
 
 include("config/conexao.php");
 
-$id = intval($_POST["id"]);
+$id = trim((string) ($_POST["id"] ?? ""));
+if (!Database::isUuid($id)) {
+    http_response_code(422);
+    exit("Parcela inválida.");
+}
 $data_pagamento = $_POST["data_pagamento"];
 $valor_pago = floatval($_POST["valor_pago"]);
 $observacoes = trim($_POST["observacoes"]);
@@ -18,7 +22,7 @@ WHERE id = ?";
 $stmt = $conexao->prepare($sql);
 
 $stmt->bind_param(
-    "sdsi",
+    "sdss",
     $data_pagamento,
     $valor_pago,
     $observacoes,

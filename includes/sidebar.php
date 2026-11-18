@@ -1,77 +1,12 @@
-<?php
-
-$paginaAtual = isset($_GET["pagina"]) ? $_GET["pagina"] : "dashboard";
-
-?>
-
-<div class="sidebar">
-
-    <div class="logo">
-
-        💰 Sistema Financeiro
-
-    </div>
-
+<?php $paginaAtual = $pagina ?? 'dashboard'; ?>
+<aside class="sidebar">
+    <div class="logo">💰 Nymbrio</div>
     <ul>
-
-        <li class="<?= $paginaAtual == 'dashboard' ? 'ativo' : '' ?>">
-
-            <a href="index.php">
-
-                🏠 Dashboard
-
-            </a>
-
-        </li>
-
-        <li class="<?= in_array($paginaAtual, ['clientes','novo_cliente','editar_cliente','visualizar_cliente']) ? 'ativo' : '' ?>">
-
-            <a href="index.php?pagina=clientes">
-
-                👥 Clientes
-
-            </a>
-
-        </li>
-
-        <li class="<?= in_array($paginaAtual, ['emprestimos','novo_emprestimo']) ? 'ativo' : '' ?>">
-
-            <a href="index.php?pagina=emprestimos">
-
-                💰 Empréstimos
-
-            </a>
-
-        </li>
-
-        <li class="<?= $paginaAtual == 'parcelas' ? 'ativo' : '' ?>">
-
-            <a href="index.php?pagina=parcelas">
-
-                📅 Parcelas
-
-            </a>
-
-        </li>
-
-        <li class="<?= $paginaAtual == 'relatorios' ? 'ativo' : '' ?>">
-
-            <a href="index.php?pagina=relatorios">
-
-                📊 Relatórios
-
-            </a>
-
-        </li>
-
+        <li class="<?= $paginaAtual === 'dashboard' ? 'ativo' : '' ?>"><a href="index.php"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+        <li class="<?= in_array($paginaAtual, ['clientes', 'novo_cliente', 'editar_cliente', 'visualizar_cliente'], true) ? 'ativo' : '' ?>"><a href="index.php?pagina=clientes"><i class="bi bi-people"></i> Clientes</a></li>
+        <li class="<?= in_array($paginaAtual, ['emprestimos', 'novo_emprestimo', 'visualizar_emprestimo'], true) ? 'ativo' : '' ?>"><a href="index.php?pagina=emprestimos"><i class="bi bi-cash-stack"></i> Empréstimos</a></li>
+        <li class="<?= in_array($paginaAtual, ['parcelas', 'receber_parcela'], true) ? 'ativo' : '' ?>"><a href="index.php?pagina=parcelas"><i class="bi bi-calendar-check"></i> Parcelas</a></li>
+        <li class="<?= $paginaAtual === 'relatorios' ? 'ativo' : '' ?>"><a href="index.php?pagina=relatorios"><i class="bi bi-graph-up"></i> Relatórios</a></li>
     </ul>
-
-    <div style="margin-top:auto;padding-top:30px;font-size:13px;color:#94a3b8;text-align:center;">
-
-        Sistema Financeiro<br>
-
-        Versão 1.0
-
-    </div>
-
-</div>
+    <div class="sidebar-versao">Nymbrio<br>PostgreSQL + PHP</div>
+</aside>

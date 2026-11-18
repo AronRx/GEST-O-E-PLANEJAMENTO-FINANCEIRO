@@ -4,22 +4,14 @@ session_start();
 
 require_once("../config/conexao.php");
 
-// ======================================
-// VERIFICA O ID
-// ======================================
-
-if (!isset($_GET["id"]) || !is_numeric($_GET["id"])) {
+if (!isset($_GET["id"]) || !Database::isUuid(trim((string) $_GET["id"]))) {
 
     header("Location: ../index.php?pagina=emprestimos");
     exit;
 
 }
 
-$id = (int) $_GET["id"];
-
-// ======================================
-// BUSCA O EMPRÉSTIMO
-// ======================================
+$id = trim((string) $_GET["id"]);
 
 $stmt = $conexao->prepare("
 SELECT
@@ -41,7 +33,7 @@ WHERE e.id = ?
 LIMIT 1
 ");
 
-$stmt->bind_param("i", $id);
+$stmt->bind_param("s", $id);
 
 $stmt->execute();
 
@@ -59,10 +51,6 @@ $emprestimo = $resultado->fetch_assoc();
 
 $stmt->close();
 
-// ======================================
-// VERIFICA PARCELAS PAGAS
-// ======================================
-
 $stmt = $conexao->prepare("
 SELECT
 
@@ -74,17 +62,13 @@ WHERE emprestimo_id = ?
 AND data_pagamento IS NOT NULL
 ");
 
-$stmt->bind_param("i", $id);
+$stmt->bind_param("s", $id);
 
 $stmt->execute();
 
 $totalParcelasPagas = $stmt->get_result()->fetch_assoc()["total"];
 
 $stmt->close();
-
-// ======================================
-// EXISTEM PARCELAS PAGAS?
-// ======================================
 
 if ($totalParcelasPagas > 0) {
 
@@ -93,10 +77,6 @@ if ($totalParcelasPagas > 0) {
     exit;
 
 }
-
-// ======================================
-// AINDA NÃO CONFIRMOU
-// ======================================
 
 if ($_SERVER["REQUEST_METHOD"] != "POST") {
 
@@ -279,15 +259,9 @@ exit;
 
 }
 
-// ======================================
-// EXECUTA A EXCLUSÃO
-// ======================================
-
 $conexao->begin_transaction();
 
 try{
-
-// Exclui todas as parcelas
 
 $stmt = $conexao->prepare("
 DELETE
@@ -295,13 +269,11 @@ FROM parcelas
 WHERE emprestimo_id = ?
 ");
 
-$stmt->bind_param("i",$id);
+$stmt->bind_param("s",$id);
 
 $stmt->execute();
 
 $stmt->close();
-
-// Exclui o empréstimo
 
 $stmt = $conexao->prepare("
 DELETE
@@ -309,13 +281,11 @@ FROM emprestimos
 WHERE id = ?
 ");
 
-$stmt->bind_param("i",$id);
+$stmt->bind_param("s",$id);
 
 $stmt->execute();
 
 $stmt->close();
-
-// Confirma
 
 $conexao->commit();
 

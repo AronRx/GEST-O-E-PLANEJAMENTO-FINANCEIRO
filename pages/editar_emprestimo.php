@@ -1,6 +1,11 @@
 <?php
 
-$id = isset($_GET["id"]) ? intval($_GET["id"]) : 0;
+$id = trim((string) ($_GET["id"] ?? ""));
+
+if (!Database::isUuid($id)) {
+    echo "<div class='alert alert-danger'>Empréstimo não encontrado.</div>";
+    return;
+}
 
 $sql = "
 SELECT *
@@ -9,7 +14,7 @@ WHERE id = ?
 ";
 
 $stmt = $conexao->prepare($sql);
-$stmt->bind_param("i", $id);
+$stmt->bind_param("s", $id);
 $stmt->execute();
 
 $resultado = $stmt->get_result();
@@ -33,8 +38,6 @@ ORDER BY nome
 
 $clientes = $conexao->query($sqlClientes);
 
-// Verifica se existem parcelas pagas
-
 $sql = "
 SELECT COUNT(*) AS total
 FROM parcelas
@@ -43,7 +46,7 @@ AND data_pagamento IS NOT NULL
 ";
 
 $stmt = $conexao->prepare($sql);
-$stmt->bind_param("i",$id);
+$stmt->bind_param("s",$id);
 $stmt->execute();
 
 $parcelasPagas = $stmt->get_result()->fetch_assoc()["total"];

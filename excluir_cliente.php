@@ -2,16 +2,14 @@
 
 include("config/conexao.php");
 
-if (!isset($_GET["id"]) || !is_numeric($_GET["id"])) {
+if (!isset($_GET["id"]) || !Database::isUuid(trim((string) $_GET["id"]))) {
 
     header("Location: index.php?pagina=clientes");
     exit;
 
 }
 
-$id = (int) $_GET["id"];
-
-// Verifica se existem empréstimos
+$id = trim((string) $_GET["id"]);
 
 $stmt = $conexao->prepare("
 SELECT COUNT(*) AS total
@@ -19,15 +17,13 @@ FROM emprestimos
 WHERE cliente_id = ?
 ");
 
-$stmt->bind_param("i", $id);
+$stmt->bind_param("s", $id);
 
 $stmt->execute();
 
 $totalEmprestimos = $stmt->get_result()->fetch_assoc()["total"];
 
 $stmt->close();
-
-// Se existir empréstimo, envia para confirmação
 
 if ($totalEmprestimos > 0) {
 
@@ -36,14 +32,12 @@ if ($totalEmprestimos > 0) {
 
 }
 
-// Caso contrário, exclui normalmente
-
 $stmt = $conexao->prepare("
 DELETE FROM clientes
 WHERE id = ?
 ");
 
-$stmt->bind_param("i", $id);
+$stmt->bind_param("s", $id);
 
 $stmt->execute();
 
