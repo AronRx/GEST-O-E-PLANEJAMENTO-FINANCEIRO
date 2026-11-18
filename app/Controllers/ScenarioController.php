@@ -12,6 +12,7 @@ class ScenarioController
     public function simulateExpense(): void
     {
         try {
+            AuthMiddleware::authenticate();
             $data = Request::all();
 
             $result = $this->scenarioService->simulateExpense(
@@ -33,6 +34,7 @@ class ScenarioController
     public function simulateIncomeChange(): void
     {
         try {
+            AuthMiddleware::authenticate();
             $data = Request::all();
 
             $result = $this->scenarioService->simulateIncomeChange(
@@ -54,6 +56,7 @@ class ScenarioController
     public function simulateExpenseReduction(): void
     {
         try {
+            AuthMiddleware::authenticate();
             $data = Request::all();
 
             $result = $this->scenarioService->simulateExpenseReduction(
@@ -75,6 +78,7 @@ class ScenarioController
     public function simulateGoalDeadline(): void
     {
         try {
+            AuthMiddleware::authenticate();
             $data = Request::all();
 
             $result = $this->scenarioService->simulateGoalDeadline(

@@ -11,6 +11,7 @@ class PlanningController
 
     public function create(): void
     {
+        AuthMiddleware::authenticate();
         $data = Request::all();
 
         $validator = new PlanningValidator($data);

@@ -15,16 +15,23 @@ class FinPlanDatabase
         $database = trim((string) (getenv('FINPLAN_DB_NAME') ?: 'finplan_homologacao'));
         $user = trim((string) (getenv('FINPLAN_DB_USER') ?: 'finplan_app'));
         $password = (string) (getenv('FINPLAN_DB_PASS') ?: '');
+        $sslMode = strtolower(trim((string) (getenv('FINPLAN_DB_SSLMODE') ?: 'require')));
+        $allowedSslModes = ['disable', 'allow', 'prefer', 'require', 'verify-ca', 'verify-full'];
+
+        if (!in_array($sslMode, $allowedSslModes, true)) {
+            throw new RuntimeException('FINPLAN_DB_SSLMODE contém um valor inválido.');
+        }
 
         if ($password === '') {
             throw new RuntimeException('FINPLAN_DB_PASS não está configurada no arquivo .env.');
         }
 
         $dsn = sprintf(
-            'pgsql:host=%s;port=%s;dbname=%s',
+            'pgsql:host=%s;port=%s;dbname=%s;sslmode=%s;connect_timeout=10',
             $host,
             $port,
-            $database
+            $database,
+            $sslMode
         );
 
         try {
@@ -36,7 +43,8 @@ class FinPlanDatabase
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES => false,
-                    PDO::ATTR_STRINGIFY_FETCHES => false
+                    PDO::ATTR_STRINGIFY_FETCHES => false,
+                    PDO::ATTR_TIMEOUT => 10
                 ]
             );
         } catch (PDOException $exception) {

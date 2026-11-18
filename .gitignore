@@ -3,14 +3,14 @@
 !.env.example
 
 /vendor/
-/node_modules/
-/storage/logs/
-*.log
 
 /uploads/*
 !/uploads/.gitkeep
 
 .vscode/
 
-.DS_Store
 Thumbs.db
+.DS_Store
+
+/storage/logs/
+*.log

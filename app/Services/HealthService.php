@@ -12,7 +12,7 @@ class HealthService
     public function getStatus(): array
     {
         $status = [
-            'sistema' => 'Sistema Financeiro',
+            'sistema' => 'Nymbrio',
             'backend' => 'online',
             'status' => 'operacional'
         ];

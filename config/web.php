@@ -7,10 +7,13 @@ ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
-    $isSecure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== '' && strtolower((string) $_SERVER['HTTPS']) !== 'off';
+    $forwardedProto = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));
+    $isSecure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== '' && strtolower((string) $_SERVER['HTTPS']) !== 'off') || $forwardedProto === 'https';
+    $scriptDirectory = rtrim(str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php'))), '/.');
+    $cookiePath = $scriptDirectory === '' ? '/' : $scriptDirectory . '/';
     session_set_cookie_params([
         'lifetime' => 0,
-        'path' => '/SistemaFinanceiro/',
+        'path' => $cookiePath,
         'domain' => '',
         'secure' => $isSecure,
         'httponly' => true,

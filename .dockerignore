@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.vscode
+.idea
+node_modules
+vendor
+storage/logs
+*.log
+*.zip
+*.7z

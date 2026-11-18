@@ -12,13 +12,12 @@ try {
         PHP_URL_PATH
     );
 
-    $basePath = '/SistemaFinanceiro';
+    $scriptPath = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/api/index.php'));
+    $scriptDirectory = rtrim(dirname($scriptPath), '/.');
+    $basePath = preg_replace('~/api$~', '', $scriptDirectory) ?: '';
 
-    if (str_starts_with($path, $basePath)) {
-        $path = substr(
-            $path,
-            strlen($basePath)
-        );
+    if ($basePath !== '' && ($path === $basePath || str_starts_with($path, $basePath . '/'))) {
+        $path = substr($path, strlen($basePath));
     }
 
     $router->dispatch(

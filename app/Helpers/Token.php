@@ -158,9 +158,13 @@ class Token
     {
         $secret = getenv('APP_KEY');
 
-        if (!$secret) {
+        if (
+            !$secret ||
+            strlen($secret) < 32 ||
+            str_starts_with($secret, 'gere_uma_chave_aleatoria')
+        ) {
             throw new RuntimeException(
-                'APP_KEY não configurada.'
+                'APP_KEY precisa ser uma chave aleatória, exclusiva e com pelo menos 32 caracteres.'
             );
         }
 

@@ -9,36 +9,6 @@ $loanController = new LoanController();
 $planningController = new PlanningController();
 $scenarioController = new ScenarioController();
 
-$tokenTestController = new TokenTestController();
-$protectedTestController = new ProtectedTestController();
-$financialCalculatorTestController = new FinancialCalculatorTestController();
-$financialAnalysisTestController = new FinancialAnalysisTestController();
-$planningTestController = new PlanningTestController();
-$travelPlanningTestController = new TravelPlanningTestController();
-$purchasePlanningTestController = new PurchasePlanningTestController();
-$projectPlanningTestController = new ProjectPlanningTestController();
-$eventPlanningTestController = new EventPlanningTestController();
-
-$router->post(
-    '/api/test/event/budget',
-    [$eventPlanningTestController, 'calculateBudget']
-);
-
-$router->post(
-    '/api/test/project/budget',
-    [$projectPlanningTestController, 'calculateBudget']
-);
-
-$router->post(
-    '/api/test/purchase/budget',
-    [$purchasePlanningTestController, 'calculateBudget']
-);
-
-$router->post(
-    '/api/test/travel/budget',
-    [$travelPlanningTestController, 'calculateBudget']
-);
-
 $router->get(
     '/api/health',
     [$healthController, 'index']
@@ -154,57 +124,90 @@ $router->post(
     [$scenarioController, 'simulateGoalDeadline']
 );
 
-$router->get(
-    '/api/test/token',
-    [$tokenTestController, 'generate']
-);
 
-$router->post(
-    '/api/test/token/validate',
-    [$tokenTestController, 'validate']
-);
+if (strtolower((string) (getenv('APP_ENV') ?: 'production')) === 'development') {
+    $tokenTestController = new TokenTestController();
+    $protectedTestController = new ProtectedTestController();
+    $financialCalculatorTestController = new FinancialCalculatorTestController();
+    $financialAnalysisTestController = new FinancialAnalysisTestController();
+    $planningTestController = new PlanningTestController();
+    $travelPlanningTestController = new TravelPlanningTestController();
+    $purchasePlanningTestController = new PurchasePlanningTestController();
+    $projectPlanningTestController = new ProjectPlanningTestController();
+    $eventPlanningTestController = new EventPlanningTestController();
 
-$router->get(
-    '/api/test/protected',
-    [$protectedTestController, 'index']
-);
+    $router->post(
+        '/api/test/event/budget',
+        [$eventPlanningTestController, 'calculateBudget']
+    );
 
-$router->post(
-    '/api/test/financial/projection',
-    [$financialCalculatorTestController, 'projection']
-);
+    $router->post(
+        '/api/test/project/budget',
+        [$projectPlanningTestController, 'calculateBudget']
+    );
 
-$router->post(
-    '/api/test/financial/goal',
-    [$financialCalculatorTestController, 'goal']
-);
+    $router->post(
+        '/api/test/purchase/budget',
+        [$purchasePlanningTestController, 'calculateBudget']
+    );
 
-$router->post(
-    '/api/test/financial/required-contribution',
-    [$financialCalculatorTestController, 'requiredContribution']
-);
+    $router->post(
+        '/api/test/travel/budget',
+        [$travelPlanningTestController, 'calculateBudget']
+    );
 
-$router->post(
-    '/api/test/financial/scenario',
-    [$financialCalculatorTestController, 'scenario']
-);
+    $router->get(
+        '/api/test/token',
+        [$tokenTestController, 'generate']
+    );
 
-$router->post(
-    '/api/test/financial/analyze',
-    [$financialAnalysisTestController, 'analyze']
-);
+    $router->post(
+        '/api/test/token/validate',
+        [$tokenTestController, 'validate']
+    );
 
-$router->post(
-    '/api/test/financial/goal-capacity',
-    [$financialAnalysisTestController, 'goalCapacity']
-);
+    $router->get(
+        '/api/test/protected',
+        [$protectedTestController, 'index']
+    );
 
-$router->post(
-    '/api/test/financial/simulate-expense',
-    [$financialAnalysisTestController, 'simulateExpense']
-);
+    $router->post(
+        '/api/test/financial/projection',
+        [$financialCalculatorTestController, 'projection']
+    );
 
-$router->post(
-    '/api/test/planning',
-    [$planningTestController, 'create']
-);
+    $router->post(
+        '/api/test/financial/goal',
+        [$financialCalculatorTestController, 'goal']
+    );
+
+    $router->post(
+        '/api/test/financial/required-contribution',
+        [$financialCalculatorTestController, 'requiredContribution']
+    );
+
+    $router->post(
+        '/api/test/financial/scenario',
+        [$financialCalculatorTestController, 'scenario']
+    );
+
+    $router->post(
+        '/api/test/financial/analyze',
+        [$financialAnalysisTestController, 'analyze']
+    );
+
+    $router->post(
+        '/api/test/financial/goal-capacity',
+        [$financialAnalysisTestController, 'goalCapacity']
+    );
+
+    $router->post(
+        '/api/test/financial/simulate-expense',
+        [$financialAnalysisTestController, 'simulateExpense']
+    );
+
+    $router->post(
+        '/api/test/planning',
+        [$planningTestController, 'create']
+    );
+}
