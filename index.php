@@ -33,6 +33,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             finplanRedirect('index.php');
         }
 
+        if ($action === 'register') {
+            $password = (string) ($_POST['senha'] ?? '');
+            $passwordConfirmation = (string) ($_POST['confirmar_senha'] ?? '');
+
+            if (!hash_equals($password, $passwordConfirmation)) {
+                throw new InvalidArgumentException('As senhas não coincidem.');
+            }
+
+            (new AuthService())->register([
+                'nome' => $_POST['nome'] ?? '',
+                'email' => $_POST['email'] ?? '',
+                'senha' => $password
+            ]);
+
+            FinPlanWeb::flash('success', 'Conta criada com sucesso. Entre com seu e-mail e senha.');
+            finplanRedirect('index.php?pagina=login');
+        }
+
         if ($action === 'logout') {
             unset($_SESSION['finplan_web_token'], $_SESSION['finplan_web_user']);
             session_regenerate_id(true);
@@ -117,6 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'loan_create' => 'index.php?pagina=novo_emprestimo',
             'receipt_create' => 'index.php?pagina=receber_parcela&id=' . (int) ($_POST['parcela_id'] ?? 0),
             'loan_cancel' => 'index.php?pagina=visualizar_emprestimo&id=' . (int) ($_POST['id'] ?? 0),
+            'register' => 'index.php?pagina=login&modo=register',
             default => 'index.php?pagina=login'
         };
         finplanRedirect($back);
