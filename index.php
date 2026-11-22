@@ -15,6 +15,21 @@ function finplanPostData(): array
     return $data;
 }
 
+function finplanRequestId(mixed $value, string $message): int|string
+{
+    $id = FinPlanId::tryNormalize($value);
+    if ($id === null) {
+        throw new InvalidArgumentException($message);
+    }
+    return $id;
+}
+
+function finplanRedirectId(mixed $value): string
+{
+    $id = FinPlanId::tryNormalize($value);
+    return $id === null ? '' : rawurlencode((string) $id);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['_action'] ?? '');
     try {
@@ -47,56 +62,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             finplanRedirect('index.php?pagina=login');
         }
 
-        $userId = (int) $user['id'];
+        $userId = $user['id'];
         $data = finplanPostData();
 
         switch ($action) {
             case 'client_create':
                 $client = (new ClientService())->create($userId, $data);
                 FinPlanWeb::flash('success', 'Cliente cadastrado com sucesso.');
-                finplanRedirect('index.php?pagina=visualizar_cliente&id=' . (int) $client['id']);
+                finplanRedirect('index.php?pagina=visualizar_cliente&id=' . rawurlencode((string) FinPlanId::normalize($client['id'])));
 
             case 'client_update':
-                $clientId = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-                if ($clientId === false) {
-                    throw new InvalidArgumentException('Identificador do cliente inválido.');
-                }
-                $client = (new ClientService())->update($userId, (int) $clientId, $data);
+                $clientId = finplanRequestId($_POST['id'] ?? null, 'Identificador do cliente inválido.');
+                $client = (new ClientService())->update($userId, $clientId, $data);
                 FinPlanWeb::flash('success', 'Dados do cliente atualizados com sucesso.');
-                finplanRedirect('index.php?pagina=visualizar_cliente&id=' . (int) $client['id']);
+                finplanRedirect('index.php?pagina=visualizar_cliente&id=' . rawurlencode((string) FinPlanId::normalize($client['id'])));
 
             case 'client_deactivate':
-                $clientId = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-                if ($clientId === false) {
-                    throw new InvalidArgumentException('Identificador do cliente inválido.');
-                }
-                (new ClientService())->deactivate($userId, (int) $clientId);
+                $clientId = finplanRequestId($_POST['id'] ?? null, 'Identificador do cliente inválido.');
+                (new ClientService())->deactivate($userId, $clientId);
                 FinPlanWeb::flash('success', 'Cliente desativado. Os registros financeiros foram preservados.');
                 finplanRedirect('index.php?pagina=clientes');
 
             case 'loan_create':
                 $loan = (new LoanService())->create($userId, $data);
                 FinPlanWeb::flash('success', 'Empréstimo criado e cronograma de parcelas gerado com sucesso.');
-                finplanRedirect('index.php?pagina=visualizar_emprestimo&id=' . (int) $loan['id']);
+                finplanRedirect('index.php?pagina=visualizar_emprestimo&id=' . rawurlencode((string) FinPlanId::normalize($loan['id'])));
 
             case 'receipt_create':
-                $installmentId = filter_var($_POST['parcela_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-                if ($installmentId === false) {
-                    throw new InvalidArgumentException('Identificador da parcela inválido.');
+                $installmentId = finplanRequestId($_POST['parcela_id'] ?? null, 'Identificador da parcela inválido.');
+                (new LoanService())->registerReceipt($userId, $installmentId, $data);
+                $installment = FinPlanWeb::installment($userId, $installmentId);
+                $installmentLoanId = FinPlanId::tryNormalize($installment['emprestimo_id'] ?? null);
+                if ($installmentLoanId === null) {
+                    throw new RuntimeException('Não foi possível localizar o contrato da parcela recebida.');
                 }
-                (new LoanService())->registerReceipt($userId, (int) $installmentId, $data);
-                $installment = FinPlanWeb::installment($userId, (int) $installmentId);
                 FinPlanWeb::flash('success', 'Recebimento registrado com sucesso.');
-                finplanRedirect('index.php?pagina=visualizar_emprestimo&id=' . (int) ($installment['emprestimo_id'] ?? 0));
+                finplanRedirect('index.php?pagina=visualizar_emprestimo&id=' . rawurlencode((string) $installmentLoanId));
 
             case 'loan_cancel':
-                $loanId = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-                if ($loanId === false) {
-                    throw new InvalidArgumentException('Identificador do empréstimo inválido.');
-                }
-                (new LoanService())->cancel($userId, (int) $loanId);
+                $loanId = finplanRequestId($_POST['id'] ?? null, 'Identificador do empréstimo inválido.');
+                (new LoanService())->cancel($userId, $loanId);
                 FinPlanWeb::flash('success', 'Empréstimo cancelado. O contrato e as parcelas foram preservados.');
-                finplanRedirect('index.php?pagina=visualizar_emprestimo&id=' . (int) $loanId);
+                finplanRedirect('index.php?pagina=visualizar_emprestimo&id=' . rawurlencode((string) $loanId));
 
             default:
                 throw new InvalidArgumentException('Operação não reconhecida.');
@@ -113,10 +120,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         FinPlanWeb::flash('danger', $message);
         $back = match ($action) {
             'client_create' => 'index.php?pagina=novo_cliente',
-            'client_update' => 'index.php?pagina=editar_cliente&id=' . (int) ($_POST['id'] ?? 0),
+            'client_update' => 'index.php?pagina=editar_cliente&id=' . finplanRedirectId($_POST['id'] ?? null),
             'loan_create' => 'index.php?pagina=novo_emprestimo',
-            'receipt_create' => 'index.php?pagina=receber_parcela&id=' . (int) ($_POST['parcela_id'] ?? 0),
-            'loan_cancel' => 'index.php?pagina=visualizar_emprestimo&id=' . (int) ($_POST['id'] ?? 0),
+            'receipt_create' => 'index.php?pagina=receber_parcela&id=' . finplanRedirectId($_POST['parcela_id'] ?? null),
+            'loan_cancel' => 'index.php?pagina=visualizar_emprestimo&id=' . finplanRedirectId($_POST['id'] ?? null),
             default => 'index.php?pagina=login'
         };
         finplanRedirect($back);

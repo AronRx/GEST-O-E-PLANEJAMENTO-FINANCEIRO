@@ -9,7 +9,7 @@ class ClientService
         $this->clientRepository = new ClientRepository();
     }
 
-    public function paginate(int $userId, array $query): array
+    public function paginate(int|string $userId, array $query): array
     {
         $search = trim((string) ($query['q'] ?? ''));
         $page = filter_var($query['page'] ?? 1, FILTER_VALIDATE_INT);
@@ -28,9 +28,9 @@ class ClientService
         );
     }
 
-    public function find(int $userId, int $clientId): array
+    public function find(int|string $userId, int|string $clientId): array
     {
-        $this->validateId($clientId);
+        $clientId = $this->normalizeId($clientId);
         $client = $this->clientRepository->findById($userId, $clientId);
 
         if ($client === null) {
@@ -40,7 +40,7 @@ class ClientService
         return $client;
     }
 
-    public function create(int $userId, array $input): array
+    public function create(int|string $userId, array $input): array
     {
         $data = $this->normalizeAndValidate($input);
 
@@ -52,9 +52,9 @@ class ClientService
         }
     }
 
-    public function update(int $userId, int $clientId, array $input): array
+    public function update(int|string $userId, int|string $clientId, array $input): array
     {
-        $this->validateId($clientId);
+        $clientId = $this->normalizeId($clientId);
         $existing = $this->clientRepository->findById($userId, $clientId);
 
         if ($existing === null) {
@@ -95,9 +95,9 @@ class ClientService
         return $updated;
     }
 
-    public function deactivate(int $userId, int $clientId): array
+    public function deactivate(int|string $userId, int|string $clientId): array
     {
-        $this->validateId($clientId);
+        $clientId = $this->normalizeId($clientId);
 
         if (!$this->clientRepository->deactivate($userId, $clientId)) {
             throw new OutOfBoundsException('Cliente não encontrado ou já está inativo.');
@@ -215,11 +215,9 @@ class ClientService
         return $value === '' ? null : $value;
     }
 
-    private function validateId(int $clientId): void
+    private function normalizeId(int|string $clientId): int|string
     {
-        if ($clientId <= 0) {
-            throw new InvalidArgumentException('Identificador de cliente inválido.');
-        }
+        return FinPlanId::normalize($clientId);
     }
 
     private function translateDatabaseException(PDOException $exception): void

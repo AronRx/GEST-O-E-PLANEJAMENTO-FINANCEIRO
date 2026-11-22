@@ -1,4 +1,4 @@
-<?php $stats = FinPlanWeb::dashboard((int) $user['id']); ?>
+<?php $stats = FinPlanWeb::dashboard($user['id']); ?>
 <div class="mb-4"><h2 class="mb-1">Relatórios</h2><p class="text-muted mb-0">Resumo consolidado dos contratos e recebimentos da sua conta.</p></div>
 <div class="card shadow-sm"><h5 class="mb-3">Resumo financeiro</h5><div class="table-responsive"><table class="table align-middle mb-0"><tbody>
 <tr><th>Clientes ativos</th><td class="text-end"><?= (int) ($stats['clientes_ativos'] ?? 0) ?></td></tr>

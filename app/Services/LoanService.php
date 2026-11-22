@@ -9,7 +9,7 @@ class LoanService
         $this->loanRepository = new LoanRepository();
     }
 
-    public function paginate(int $userId, array $query): array
+    public function paginate(int|string $userId, array $query): array
     {
         $search = trim((string) ($query['q'] ?? ''));
         $page = filter_var($query['page'] ?? 1, FILTER_VALIDATE_INT);
@@ -31,9 +31,9 @@ class LoanService
         );
     }
 
-    public function find(int $userId, int $loanId): array
+    public function find(int|string $userId, int|string $loanId): array
     {
-        $this->validateId($loanId);
+        $loanId = $this->normalizeId($loanId);
         $loan = $this->loanRepository->findById($userId, $loanId);
         if ($loan === null) {
             throw new OutOfBoundsException('Empréstimo não encontrado.');
@@ -41,7 +41,7 @@ class LoanService
         return $loan;
     }
 
-    public function create(int $userId, array $input): array
+    public function create(int|string $userId, array $input): array
     {
         $data = $this->normalizeContract($input, true);
         try {
@@ -57,15 +57,15 @@ class LoanService
         return $this->loanRepository->simulate($this->normalizeContract($input, false));
     }
 
-    public function installments(int $userId, int $loanId): array
+    public function installments(int|string $userId, int|string $loanId): array
     {
-        $this->validateId($loanId);
+        $loanId = $this->normalizeId($loanId);
         return $this->loanRepository->installments($userId, $loanId);
     }
 
-    public function registerReceipt(int $userId, int $installmentId, array $input): array
+    public function registerReceipt(int|string $userId, int|string $installmentId, array $input): array
     {
-        $this->validateId($installmentId);
+        $installmentId = $this->normalizeId($installmentId);
         $value = $this->decimal($input['valor'] ?? null, 'valor', 13, 2, true);
         $date = $this->date($input['data_recebimento'] ?? date('Y-m-d'), 'data_recebimento');
         $method = strtolower(trim((string) ($input['forma_pagamento'] ?? 'pix')));
@@ -76,8 +76,8 @@ class LoanService
 
         $accountId = $input['conta_id'] ?? null;
         if ($accountId !== null && $accountId !== '') {
-            $accountId = filter_var($accountId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-            if ($accountId === false) {
+            $accountId = FinPlanId::tryNormalize($accountId);
+            if ($accountId === null) {
                 throw new InvalidArgumentException('Identificador de conta inválido.');
             }
         } else {
@@ -103,9 +103,9 @@ class LoanService
         }
     }
 
-    public function cancel(int $userId, int $loanId): array
+    public function cancel(int|string $userId, int|string $loanId): array
     {
-        $this->validateId($loanId);
+        $loanId = $this->normalizeId($loanId);
         return $this->loanRepository->cancel($userId, $loanId);
     }
 
@@ -113,8 +113,8 @@ class LoanService
     {
         $clientId = null;
         if ($requiresClient) {
-            $clientId = filter_var($input['cliente_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-            if ($clientId === false) {
+            $clientId = FinPlanId::tryNormalize($input['cliente_id'] ?? null);
+            if ($clientId === null) {
                 throw new InvalidArgumentException('Informe um cliente válido.');
             }
         }
@@ -141,6 +141,9 @@ class LoanService
         }
 
         $observations = $this->nullableString($input['observacoes'] ?? null);
+        if ($observations !== null && self::stringLength($observations) > 5000) {
+            throw new InvalidArgumentException('As observações devem possuir no máximo 5000 caracteres.');
+        }
 
         return [
             'cliente_id' => $clientId,
@@ -212,11 +215,9 @@ class LoanService
         return $matched === false ? strlen($value) : $matched;
     }
 
-    private function validateId(int $id): void
+    private function normalizeId(int|string $id): int|string
     {
-        if ($id <= 0) {
-            throw new InvalidArgumentException('Identificador inválido.');
-        }
+        return FinPlanId::normalize($id);
     }
 
     private function translateDatabaseException(PDOException $exception): void

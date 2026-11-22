@@ -57,7 +57,7 @@ class AuthController
     {
         try {
             $user = AuthMiddleware::authenticate();
-            Response::success($this->authService->me((int) $user['sub']));
+            Response::success($this->authService->me($user['sub']));
         } catch (UnexpectedValueException $exception) {
             Response::error($exception->getMessage(), 401);
         }

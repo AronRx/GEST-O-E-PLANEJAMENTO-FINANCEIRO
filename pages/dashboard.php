@@ -1,6 +1,6 @@
 <?php
-$stats = FinPlanWeb::dashboard((int) $user['id']);
-$recentLoans = (new LoanService())->paginate((int) $user['id'], ['page' => 1, 'per_page' => 5])['items'];
+$stats = FinPlanWeb::dashboard($user['id']);
+$recentLoans = (new LoanService())->paginate($user['id'], ['page' => 1, 'per_page' => 5])['items'];
 ?>
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
     <div><h2 class="mb-1">Visão geral</h2><p class="text-muted mb-0">Resumo da sua operação financeira.</p></div>
@@ -22,7 +22,7 @@ $recentLoans = (new LoanService())->paginate((int) $user['id'], ['page' => 1, 'p
     <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Cliente</th><th>Principal</th><th>Total do contrato</th><th>Recebido</th><th>Situação</th><th></th></tr></thead><tbody>
     <?php foreach ($recentLoans as $loan): ?>
         <?php $situation = (string) $loan['situacao']; $badge = ['ativo' => 'primary', 'atrasado' => 'danger', 'quitado' => 'success', 'cancelado' => 'secondary'][$situation] ?? 'secondary'; ?>
-        <tr><td class="fw-semibold"><?= FinPlanWeb::e($loan['cliente_nome']) ?></td><td><?= FinPlanWeb::money($loan['valor_principal']) ?></td><td><?= FinPlanWeb::money($loan['valor_total']) ?></td><td><?= FinPlanWeb::money($loan['total_pago']) ?></td><td><span class="badge text-bg-<?= $badge ?>"><?= FinPlanWeb::e(ucfirst($situation)) ?></span></td><td class="text-end"><a href="index.php?pagina=visualizar_emprestimo&id=<?= (int) $loan['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td></tr>
+        <tr><td class="fw-semibold"><?= FinPlanWeb::e($loan['cliente_nome']) ?></td><td><?= FinPlanWeb::money($loan['valor_principal']) ?></td><td><?= FinPlanWeb::money($loan['valor_total']) ?></td><td><?= FinPlanWeb::money($loan['total_pago']) ?></td><td><span class="badge text-bg-<?= $badge ?>"><?= FinPlanWeb::e(ucfirst($situation)) ?></span></td><td class="text-end"><a href="index.php?pagina=visualizar_emprestimo&id=<?= FinPlanWeb::e($loan['id']) ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td></tr>
     <?php endforeach; ?>
     <?php if ($recentLoans === []): ?><tr><td colspan="6" class="text-center text-muted py-4">Nenhum empréstimo cadastrado ainda.</td></tr><?php endif; ?>
     </tbody></table></div>

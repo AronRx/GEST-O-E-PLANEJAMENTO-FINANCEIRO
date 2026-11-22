@@ -21,18 +21,14 @@ class AuthMiddleware
             Response::error('Token de autenticação inválido ou expirado.', 401);
         }
 
-        $userId = filter_var(
-            $payload['sub'] ?? null,
-            FILTER_VALIDATE_INT,
-            ['options' => ['min_range' => 1]]
-        );
+        $userId = FinPlanId::tryNormalize($payload['sub'] ?? null);
 
-        if ($userId === false) {
+        if ($userId === null) {
             Response::error('Token de autenticação inválido.', 401);
         }
 
         try {
-            $user = (new UserRepository())->findById((int) $userId);
+            $user = (new UserRepository())->findById($userId);
         } catch (PDOException $exception) {
             if ($exception->getCode() === '42501') {
                 Response::error('Sessão inválida ou usuário inativo.', 401);
@@ -50,7 +46,7 @@ class AuthMiddleware
         }
 
         return [
-            'sub' => (int) $user['id'],
+            'sub' => FinPlanId::normalize($user['id']),
             'nome' => (string) $user['nome'],
             'email' => (string) $user['email'],
             'perfil' => (string) $user['perfil'],

@@ -46,6 +46,8 @@ Valores aceitos para `situacao`: `ativo`, `atrasado`, `quitado`, `cancelado`.
 
 A API exige que o cliente pertença ao usuário autenticado e esteja ativo. A criação chama `finplan.fn_criar_emprestimo`, que grava o contrato e todas as parcelas em uma transação e valida o cronograma no commit. O backend não calcula as parcelas.
 
+Os identificadores (`cliente_id`, `conta_id`, `parcela_id` e o `{id}` das rotas) aceitam UUID ou inteiro, conforme o tipo real das colunas do schema `finplan`. O PHP normaliza o valor antes de enviá-lo ao banco e não converte UUID para inteiro.
+
 ## Consultar empréstimo
 
 `GET /emprestimos/{id}`

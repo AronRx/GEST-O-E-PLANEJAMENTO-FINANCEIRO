@@ -13,7 +13,7 @@ class ClientController
     {
         try {
             $user = AuthMiddleware::authenticate();
-            Response::success($this->clientService->paginate((int) $user['sub'], Request::all()));
+            Response::success($this->clientService->paginate($user['sub'], Request::all()));
         } catch (Throwable $exception) {
             $this->handleException($exception);
         }
@@ -23,7 +23,7 @@ class ClientController
     {
         try {
             $user = AuthMiddleware::authenticate();
-            Response::success($this->clientService->find((int) $user['sub'], $this->parseId($id)));
+            Response::success($this->clientService->find($user['sub'], $this->parseId($id)));
         } catch (Throwable $exception) {
             $this->handleException($exception);
         }
@@ -33,7 +33,7 @@ class ClientController
     {
         try {
             $user = AuthMiddleware::authenticate();
-            Response::success($this->clientService->create((int) $user['sub'], Request::all()), 201);
+            Response::success($this->clientService->create($user['sub'], Request::all()), 201);
         } catch (Throwable $exception) {
             $this->handleException($exception);
         }
@@ -43,7 +43,7 @@ class ClientController
     {
         try {
             $user = AuthMiddleware::authenticate();
-            Response::success($this->clientService->update((int) $user['sub'], $this->parseId($id), Request::all()));
+            Response::success($this->clientService->update($user['sub'], $this->parseId($id), Request::all()));
         } catch (Throwable $exception) {
             $this->handleException($exception);
         }
@@ -53,20 +53,20 @@ class ClientController
     {
         try {
             $user = AuthMiddleware::authenticate();
-            Response::success($this->clientService->deactivate((int) $user['sub'], $this->parseId($id)));
+            Response::success($this->clientService->deactivate($user['sub'], $this->parseId($id)));
         } catch (Throwable $exception) {
             $this->handleException($exception);
         }
     }
 
-    private function parseId(string $id): int
+    private function parseId(string $id): int|string
     {
-        $validated = filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        if ($validated === false) {
+        $validated = FinPlanId::tryNormalize($id);
+        if ($validated === null) {
             throw new InvalidArgumentException('Identificador de cliente inválido.');
         }
 
-        return (int) $validated;
+        return $validated;
     }
 
     private function handleException(Throwable $exception): void

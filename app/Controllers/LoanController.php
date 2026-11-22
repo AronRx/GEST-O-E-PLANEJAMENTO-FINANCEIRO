@@ -13,7 +13,7 @@ class LoanController
     {
         try {
             $user = AuthMiddleware::authenticate();
-            Response::success($this->loanService->paginate((int) $user['sub'], Request::all()));
+            Response::success($this->loanService->paginate($user['sub'], Request::all()));
         } catch (Throwable $exception) {
             $this->handleException($exception);
         }
@@ -23,7 +23,7 @@ class LoanController
     {
         try {
             $user = AuthMiddleware::authenticate();
-            Response::success($this->loanService->find((int) $user['sub'], $this->parseId($id)));
+            Response::success($this->loanService->find($user['sub'], $this->parseId($id)));
         } catch (Throwable $exception) {
             $this->handleException($exception);
         }
@@ -33,7 +33,7 @@ class LoanController
     {
         try {
             $user = AuthMiddleware::authenticate();
-            Response::success($this->loanService->create((int) $user['sub'], Request::all()), 201);
+            Response::success($this->loanService->create($user['sub'], Request::all()), 201);
         } catch (Throwable $exception) {
             $this->handleException($exception);
         }
@@ -53,7 +53,7 @@ class LoanController
     {
         try {
             $user = AuthMiddleware::authenticate();
-            Response::success($this->loanService->installments((int) $user['sub'], $this->parseId($id)));
+            Response::success($this->loanService->installments($user['sub'], $this->parseId($id)));
         } catch (Throwable $exception) {
             $this->handleException($exception);
         }
@@ -63,7 +63,7 @@ class LoanController
     {
         try {
             $user = AuthMiddleware::authenticate();
-            Response::success($this->loanService->registerReceipt((int) $user['sub'], $this->parseId($id), Request::all()), 201);
+            Response::success($this->loanService->registerReceipt($user['sub'], $this->parseId($id), Request::all()), 201);
         } catch (Throwable $exception) {
             $this->handleException($exception);
         }
@@ -73,19 +73,19 @@ class LoanController
     {
         try {
             $user = AuthMiddleware::authenticate();
-            Response::success($this->loanService->cancel((int) $user['sub'], $this->parseId($id)));
+            Response::success($this->loanService->cancel($user['sub'], $this->parseId($id)));
         } catch (Throwable $exception) {
             $this->handleException($exception);
         }
     }
 
-    private function parseId(string $id): int
+    private function parseId(string $id): int|string
     {
-        $validated = filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        if ($validated === false) {
+        $validated = FinPlanId::tryNormalize($id);
+        if ($validated === null) {
             throw new InvalidArgumentException('Identificador inválido.');
         }
-        return (int) $validated;
+        return $validated;
     }
 
     private function handleException(Throwable $exception): void

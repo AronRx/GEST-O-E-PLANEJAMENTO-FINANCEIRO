@@ -41,5 +41,5 @@ $insert->execute([
 ]);
 
 $id = (string) $insert->fetchColumn();
-fwrite(STDOUT, "Usuário criado com sucesso. UUID: {$id}\n");
+fwrite(STDOUT, "Usuário criado com sucesso. ID: {$id}\n");
 fwrite(STDOUT, "Com apenas um usuário ativo, APP_USER_ID pode permanecer vazio no .env.\n");

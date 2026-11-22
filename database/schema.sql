@@ -1,8 +1,7 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE usuarios (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     nome            VARCHAR(150) NOT NULL,
     email           VARCHAR(255) NOT NULL UNIQUE,
     senha_hash      VARCHAR(255) NOT NULL,
@@ -14,8 +13,8 @@ CREATE TABLE usuarios (
 );
 
 CREATE TABLE clientes (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     nome            VARCHAR(150) NOT NULL,
     documento       VARCHAR(20), 
     telefone        VARCHAR(20),
@@ -28,9 +27,9 @@ CREATE TABLE clientes (
 );
 
 CREATE TABLE emprestimos (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id          UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    cliente_id          UUID NOT NULL REFERENCES clientes(id) ON DELETE RESTRICT,
+    id                  BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id          BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    cliente_id          BIGINT NOT NULL REFERENCES clientes(id) ON DELETE RESTRICT,
     valor_principal     DECIMAL(15,2) NOT NULL,
     taxa_juros          DECIMAL(8,4) NOT NULL, 
     tipo_juros          VARCHAR(20) DEFAULT 'simples', 
@@ -43,8 +42,8 @@ CREATE TABLE emprestimos (
 );
 
 CREATE TABLE parcelas (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    emprestimo_id       UUID NOT NULL REFERENCES emprestimos(id) ON DELETE CASCADE,
+    id                  BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    emprestimo_id       BIGINT NOT NULL REFERENCES emprestimos(id) ON DELETE CASCADE,
     numero_parcela      INTEGER NOT NULL,
     valor               DECIMAL(15,2) NOT NULL,
     data_vencimento     DATE NOT NULL,
@@ -57,8 +56,8 @@ CREATE TABLE parcelas (
 );
 
 CREATE TABLE categorias (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     nome            VARCHAR(100) NOT NULL,
     tipo            VARCHAR(20) NOT NULL, 
     cor             VARCHAR(7), 
@@ -69,9 +68,9 @@ CREATE TABLE categorias (
 );
 
 CREATE TABLE receitas (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    categoria_id    UUID REFERENCES categorias(id) ON DELETE SET NULL,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    categoria_id    BIGINT REFERENCES categorias(id) ON DELETE SET NULL,
     descricao       VARCHAR(255) NOT NULL,
     valor           DECIMAL(15,2) NOT NULL,
     data_receita    DATE NOT NULL,
@@ -82,9 +81,9 @@ CREATE TABLE receitas (
 );
 
 CREATE TABLE despesas (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    categoria_id    UUID REFERENCES categorias(id) ON DELETE SET NULL,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    categoria_id    BIGINT REFERENCES categorias(id) ON DELETE SET NULL,
     descricao       VARCHAR(255) NOT NULL,
     valor           DECIMAL(15,2) NOT NULL,
     data_despesa    DATE NOT NULL,
@@ -95,22 +94,22 @@ CREATE TABLE despesas (
 );
 
 CREATE TABLE transacoes (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    categoria_id    UUID REFERENCES categorias(id) ON DELETE SET NULL,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    categoria_id    BIGINT REFERENCES categorias(id) ON DELETE SET NULL,
     tipo            VARCHAR(20) NOT NULL, 
     descricao       VARCHAR(255) NOT NULL,
     valor           DECIMAL(15,2) NOT NULL,
     data_transacao  DATE NOT NULL,
     origem_tipo     VARCHAR(50), 
-    origem_id       UUID, 
+    origem_id       BIGINT, 
     observacoes     TEXT,
     criado_em       TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE metas (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     titulo          VARCHAR(150) NOT NULL,
     descricao       TEXT,
     valor_alvo      DECIMAL(15,2) NOT NULL,
@@ -123,8 +122,8 @@ CREATE TABLE metas (
 );
 
 CREATE TABLE projetos (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     nome            VARCHAR(150) NOT NULL,
     descricao       TEXT,
     status          VARCHAR(30) DEFAULT 'ativo', 
@@ -136,18 +135,18 @@ CREATE TABLE projetos (
 );
 
 CREATE TABLE projeto_categorias (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    projeto_id      UUID NOT NULL REFERENCES projetos(id) ON DELETE CASCADE,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    projeto_id      BIGINT NOT NULL REFERENCES projetos(id) ON DELETE CASCADE,
     nome            VARCHAR(100) NOT NULL,
     tipo            VARCHAR(20) DEFAULT 'despesa', 
     criado_em       TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE aportes (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    projeto_id      UUID REFERENCES projetos(id) ON DELETE SET NULL,
-    meta_id         UUID REFERENCES metas(id) ON DELETE SET NULL,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    projeto_id      BIGINT REFERENCES projetos(id) ON DELETE SET NULL,
+    meta_id         BIGINT REFERENCES metas(id) ON DELETE SET NULL,
     valor           DECIMAL(15,2) NOT NULL,
     data_aporte     DATE NOT NULL,
     descricao       VARCHAR(255),
@@ -155,9 +154,9 @@ CREATE TABLE aportes (
 );
 
 CREATE TABLE planejamentos (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    projeto_id      UUID REFERENCES projetos(id) ON DELETE SET NULL,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    projeto_id      BIGINT REFERENCES projetos(id) ON DELETE SET NULL,
     titulo          VARCHAR(150) NOT NULL,
     descricao       TEXT,
     data_inicio     DATE,
@@ -168,8 +167,8 @@ CREATE TABLE planejamentos (
 );
 
 CREATE TABLE planejamentos_etapas (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    planejamento_id     UUID NOT NULL REFERENCES planejamentos(id) ON DELETE CASCADE,
+    id                  BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    planejamento_id     BIGINT NOT NULL REFERENCES planejamentos(id) ON DELETE CASCADE,
     titulo              VARCHAR(150) NOT NULL,
     descricao           TEXT,
     ordem               INTEGER DEFAULT 0,
@@ -180,8 +179,8 @@ CREATE TABLE planejamentos_etapas (
 );
 
 CREATE TABLE conversas_ia (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     titulo          VARCHAR(200),
     contexto        TEXT, 
     criado_em       TIMESTAMPTZ DEFAULT NOW(),
@@ -189,8 +188,8 @@ CREATE TABLE conversas_ia (
 );
 
 CREATE TABLE mensagens_ia (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    conversa_id     UUID NOT NULL REFERENCES conversas_ia(id) ON DELETE CASCADE,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    conversa_id     BIGINT NOT NULL REFERENCES conversas_ia(id) ON DELETE CASCADE,
     role            VARCHAR(20) NOT NULL, 
     conteudo        TEXT NOT NULL,
     tokens_usados   INTEGER,
@@ -198,21 +197,21 @@ CREATE TABLE mensagens_ia (
 );
 
 CREATE TABLE alertas (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     tipo            VARCHAR(50) NOT NULL, 
     titulo          VARCHAR(150) NOT NULL,
     mensagem        TEXT,
     referencia_tipo VARCHAR(50), 
-    referencia_id   UUID,
+    referencia_id   BIGINT,
     lido            BOOLEAN DEFAULT FALSE,
     data_alerta     TIMESTAMPTZ DEFAULT NOW(),
     criado_em       TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE notificacoes (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     titulo          VARCHAR(150) NOT NULL,
     mensagem        TEXT,
     tipo            VARCHAR(30) DEFAULT 'info', 
@@ -222,8 +221,8 @@ CREATE TABLE notificacoes (
 );
 
 CREATE TABLE relatorios (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    usuario_id      UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    id              BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    usuario_id      BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     tipo            VARCHAR(50) NOT NULL, 
     titulo          VARCHAR(150) NOT NULL,
     parametros      JSONB, 

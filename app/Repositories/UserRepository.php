@@ -14,7 +14,7 @@ class UserRepository extends BaseRepository
         return $user ?: null;
     }
 
-    public function findById(int $id): ?array
+    public function findById(int|string $id): ?array
     {
         return FinPlanDatabase::runAsUser($id, function (PDO $pdo): ?array {
             $statement = $pdo->query(
@@ -29,7 +29,7 @@ class UserRepository extends BaseRepository
         });
     }
 
-    public function create(array $data): int
+    public function create(array $data): int|string
     {
         $statement = $this->database()->prepare(
             'SELECT finplan.fn_criar_usuario(:nome, :email, :senha_hash) AS id'
@@ -47,11 +47,13 @@ class UserRepository extends BaseRepository
             throw new RuntimeException('O banco não retornou o identificador do usuário criado.');
         }
 
-        return (int) $id;
+        return FinPlanId::normalize($id);
     }
 
-    public function registerLogin(int $id): void
+    public function registerLogin(int|string $id): void
     {
+        $id = FinPlanId::normalize($id);
+
         FinPlanDatabase::runAsUser($id, function (PDO $pdo) use ($id): void {
             $statement = $pdo->prepare('SELECT finplan.fn_registrar_login(:user_id)');
             $statement->execute(['user_id' => $id]);

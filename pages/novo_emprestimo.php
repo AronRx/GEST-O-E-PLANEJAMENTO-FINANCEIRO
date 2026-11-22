@@ -1,5 +1,5 @@
 <?php
-$clientResult = (new ClientService())->paginate((int) $user['id'], ['page' => 1, 'per_page' => 100]);
+$clientResult = (new ClientService())->paginate($user['id'], ['page' => 1, 'per_page' => 100]);
 $clients = $clientResult['items'];
 $today = date('Y-m-d');
 $firstDue = (new DateTimeImmutable('today +1 month'))->format('Y-m-d');
@@ -8,7 +8,7 @@ $firstDue = (new DateTimeImmutable('today +1 month'))->format('Y-m-d');
 <?php if ($clients === []): ?><div class="alert alert-warning">Você precisa cadastrar um cliente ativo antes de criar um empréstimo. <a href="index.php?pagina=novo_cliente" class="alert-link">Cadastrar cliente</a>.</div><?php else: ?>
 <form method="POST" action="index.php"><input type="hidden" name="_csrf" value="<?= FinPlanWeb::e(FinPlanWeb::csrfToken()) ?>"><input type="hidden" name="_action" value="loan_create">
 <div class="card shadow-sm"><div class="card-body"><div class="row g-3">
-    <div class="col-md-6"><label class="form-label" for="cliente_id">Cliente *</label><select class="form-select" id="cliente_id" name="cliente_id" required><option value="">Selecione um cliente</option><?php foreach ($clients as $client): ?><option value="<?= (int) $client['id'] ?>"><?= FinPlanWeb::e($client['nome']) ?></option><?php endforeach; ?></select></div>
+    <div class="col-md-6"><label class="form-label" for="cliente_id">Cliente *</label><select class="form-select" id="cliente_id" name="cliente_id" required><option value="">Selecione um cliente</option><?php foreach ($clients as $client): ?><option value="<?= FinPlanWeb::e($client['id']) ?>"><?= FinPlanWeb::e($client['nome']) ?></option><?php endforeach; ?></select></div>
     <div class="col-md-3"><label class="form-label" for="valor_principal">Valor emprestado (R$) *</label><input class="form-control" type="number" id="valor_principal" name="valor_principal" min="0.01" step="0.01" required></div>
     <div class="col-md-3"><label class="form-label" for="taxa_juros_mensal">Juros ao mês (%) *</label><input class="form-control" type="number" id="taxa_juros_mensal" name="taxa_juros_mensal" min="0" step="0.0001" value="0" required></div>
     <div class="col-md-3"><label class="form-label" for="qtd_parcelas">Quantidade de parcelas *</label><input class="form-control" type="number" id="qtd_parcelas" name="qtd_parcelas" min="1" max="600" step="1" required></div>

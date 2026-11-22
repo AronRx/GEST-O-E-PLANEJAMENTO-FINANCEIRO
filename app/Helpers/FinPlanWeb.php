@@ -18,21 +18,26 @@ class FinPlanWeb
         }
 
         $payload = Token::validate($token);
-        $userId = filter_var($payload['sub'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        if ($payload === null || $userId === false) {
+        if ($payload === null) {
+            unset($_SESSION['finplan_web_token'], $_SESSION['finplan_web_user']);
+            return null;
+        }
+
+        $userId = FinPlanId::tryNormalize($payload['sub'] ?? null);
+        if ($userId === null) {
             unset($_SESSION['finplan_web_token'], $_SESSION['finplan_web_user']);
             return null;
         }
 
         try {
-            $user = (new UserRepository())->findById((int) $userId);
+            $user = (new UserRepository())->findById($userId);
             if (!$user || !self::boolean($user['ativo'] ?? false)) {
                 unset($_SESSION['finplan_web_token'], $_SESSION['finplan_web_user']);
                 return null;
             }
 
             self::$resolvedUser = [
-                'id' => (int) $user['id'],
+                'id' => FinPlanId::normalize($user['id']),
                 'nome' => (string) $user['nome'],
                 'email' => (string) $user['email'],
                 'perfil' => (string) $user['perfil']
@@ -96,27 +101,52 @@ class FinPlanWeb
         }
     }
 
-    public static function dashboard(int $userId): array
+    public static function dashboard(int|string $userId): array
     {
-        return FinPlanDatabase::runAsUser($userId, function (PDO $pdo): array {
+        $userId = FinPlanId::normalize($userId);
+
+        return FinPlanDatabase::runAsUser($userId, function (PDO $pdo) use ($userId): array {
             $sql = <<<'SQL'
+                WITH meus_clientes AS (
+                    SELECT id, ativo
+                    FROM finplan.clientes
+                    WHERE usuario_id = :usuario_id
+                ),
+                meus_emprestimos AS (
+                    SELECT e.*
+                    FROM finplan.vw_emprestimos e
+                    JOIN meus_clientes c ON c.id = e.cliente_id
+                ),
+                minhas_parcelas AS (
+                    SELECT p.*
+                    FROM finplan.vw_parcelas p
+                    JOIN finplan.emprestimos e ON e.id = p.emprestimo_id
+                    JOIN meus_clientes c ON c.id = e.cliente_id
+                )
                 SELECT
-                    (SELECT COUNT(*) FROM finplan.clientes WHERE ativo IS TRUE) AS clientes_ativos,
-                    (SELECT COUNT(*) FROM finplan.vw_emprestimos) AS emprestimos_total,
-                    (SELECT COUNT(*) FROM finplan.vw_emprestimos WHERE situacao = 'ativo') AS emprestimos_ativos,
-                    (SELECT COUNT(*) FROM finplan.vw_emprestimos WHERE situacao = 'quitado') AS emprestimos_quitados,
-                    (SELECT COALESCE(SUM(valor_principal), 0) FROM finplan.vw_emprestimos WHERE status <> 'cancelado') AS principal_total,
-                    (SELECT COALESCE(SUM(total_pago), 0) FROM finplan.vw_emprestimos) AS total_recebido,
-                    (SELECT COALESCE(SUM(saldo_a_receber), 0) FROM finplan.vw_emprestimos WHERE status <> 'cancelado') AS saldo_a_receber,
-                    (SELECT COUNT(*) FROM finplan.vw_parcelas WHERE status = 'atrasada') AS parcelas_atrasadas
+                    (SELECT COUNT(*) FROM meus_clientes WHERE ativo IS TRUE) AS clientes_ativos,
+                    (SELECT COUNT(*) FROM meus_emprestimos) AS emprestimos_total,
+                    (SELECT COUNT(*) FROM meus_emprestimos WHERE situacao = 'ativo') AS emprestimos_ativos,
+                    (SELECT COUNT(*) FROM meus_emprestimos WHERE situacao = 'quitado') AS emprestimos_quitados,
+                    (SELECT COALESCE(SUM(valor_principal), 0) FROM meus_emprestimos WHERE status <> 'cancelado') AS principal_total,
+                    (SELECT COALESCE(SUM(total_pago), 0) FROM meus_emprestimos) AS total_recebido,
+                    (SELECT COALESCE(SUM(saldo_a_receber), 0) FROM meus_emprestimos WHERE status <> 'cancelado') AS saldo_a_receber,
+                    (SELECT COUNT(*) FROM minhas_parcelas WHERE status = 'atrasada') AS parcelas_atrasadas
             SQL;
-            return $pdo->query($sql)->fetch() ?: [];
+
+            $statement = $pdo->prepare($sql);
+            $statement->execute(['usuario_id' => $userId]);
+
+            return $statement->fetch() ?: [];
         });
     }
 
-    public static function installment(int $userId, int $installmentId): ?array
+    public static function installment(int|string $userId, int|string $installmentId): ?array
     {
-        return FinPlanDatabase::runAsUser($userId, function (PDO $pdo) use ($installmentId): ?array {
+        $userId = FinPlanId::normalize($userId);
+        $installmentId = FinPlanId::normalize($installmentId);
+
+        return FinPlanDatabase::runAsUser($userId, function (PDO $pdo) use ($userId, $installmentId): ?array {
             $statement = $pdo->prepare(
                 'SELECT p.id, p.emprestimo_id, p.numero, p.vencimento, p.valor,
                         p.valor_pago, p.saldo, p.status, c.nome AS cliente_nome,
@@ -124,21 +154,28 @@ class FinPlanWeb
                  FROM finplan.vw_parcelas p
                  JOIN finplan.emprestimos e ON e.id = p.emprestimo_id
                  JOIN finplan.clientes c ON c.id = e.cliente_id
-                 WHERE p.id = :id
+                 WHERE p.id = :id AND c.usuario_id = :usuario_id
                  LIMIT 1'
             );
-            $statement->execute(['id' => $installmentId]);
+            $statement->execute(['id' => $installmentId, 'usuario_id' => $userId]);
             $row = $statement->fetch();
             return $row ?: null;
         });
     }
 
-    public static function activeAccounts(int $userId): array
+    public static function activeAccounts(int|string $userId): array
     {
-        return FinPlanDatabase::runAsUser($userId, function (PDO $pdo): array {
-            return $pdo->query(
-                'SELECT id, nome, tipo FROM finplan.contas WHERE ativa IS TRUE ORDER BY CASE WHEN nome = \'Carteira\' THEN 0 ELSE 1 END, nome'
-            )->fetchAll();
+        $userId = FinPlanId::normalize($userId);
+
+        return FinPlanDatabase::runAsUser($userId, function (PDO $pdo) use ($userId): array {
+            $statement = $pdo->prepare(
+                "SELECT id, nome, tipo
+                 FROM finplan.contas
+                 WHERE ativa IS TRUE AND usuario_id = :usuario_id
+                 ORDER BY CASE WHEN nome = 'Carteira' THEN 0 ELSE 1 END, nome"
+            );
+            $statement->execute(['usuario_id' => $userId]);
+            return $statement->fetchAll();
         });
     }
 

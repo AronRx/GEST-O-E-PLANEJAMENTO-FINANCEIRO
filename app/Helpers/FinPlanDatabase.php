@@ -51,11 +51,11 @@ class FinPlanDatabase
         return self::$connection;
     }
 
-    public static function runAsUser(int $userId, callable $callback): mixed
+    public static function runAsUser(int|string $userId, callable $callback): mixed
     {
-        if ($userId <= 0) {
-            throw new InvalidArgumentException('Identificador de usuário inválido.');
-        }
+        // Aceita UUID (string) ou BIGINT (int) e garante o formato correto
+        // antes de abrir o contexto no PostgreSQL.
+        $userId = FinPlanId::normalize($userId);
 
         $pdo = self::connection();
 

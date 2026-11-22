@@ -82,7 +82,7 @@ class AuthService
             throw new UnexpectedValueException('E-mail ou senha inválidos.');
         }
 
-        $userId = (int) $user['id'];
+        $userId = FinPlanId::normalize($user['id']);
         $this->userRepository->registerLogin($userId);
 
         $token = Token::generate([
@@ -127,7 +127,7 @@ class AuthService
         return $ttl > 0 ? $ttl : 7200;
     }
 
-    public function me(int $userId): array
+    public function me(int|string $userId): array
     {
         $user = $this->userRepository->findById($userId);
 
@@ -136,7 +136,7 @@ class AuthService
         }
 
         return [
-            'id' => (int) $user['id'],
+            'id' => FinPlanId::normalize($user['id']),
             'nome' => (string) $user['nome'],
             'email' => (string) $user['email'],
             'perfil' => (string) $user['perfil'],

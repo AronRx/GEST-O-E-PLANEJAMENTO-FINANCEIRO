@@ -224,6 +224,67 @@ dados reais do banco, como:
 -   Empréstimos ativos e quitados.
 -   Parcelas atrasadas.
 
+## Banco de Dados
+
+**Tipo de ID:** `BIGINT GENERATED ALWAYS AS IDENTITY` em todas as tabelas.
+Não usar UUID.
+
+### Setup
+
+1. Configurar `.env` com as variáveis `FINPLAN_DB_*`:
+
+FINPLAN_DB_HOST=localhost
+FINPLAN_DB_PORT=5432
+FINPLAN_DB_NAME=finplan
+FINPLAN_DB_USER=postgres
+FINPLAN_DB_PASSWORD=sua_senha
+
+
+2. Rodar migrations:
+```bash
+./run_migrations.sh
+```
+
+Verificar que não resta nenhum UUID:
+```sql
+SELECT table_name, column_name, data_type
+FROM information_schema.columns
+WHERE table_schema = 'finplan'
+  AND data_type = 'uuid';
+```
+
+→ Deve retornar 0 linhas.
+
+### Ordem das Migrations
+
+| # | Arquivo | Descrição |
+|---|---------|-----------|
+| 1 | `database/schema.sql` | Schema base (BIGINT) |
+| 2 | `database/finplan_parcelas_recebimentos.sql` | Views, triggers, funções |
+| 3 | `migrations/005_fix_clientes.sql` | Correção clientes |
+| 4 | `migrations/006_backfill_clientes.sql` | Backfill clientes |
+| 5 | `migrations/007_fix_usuarios_bigint.sql` | Correção usuarios |
+| 6 | `migrations/008_fix_remaining_modules.sql` | Contas, recebimentos, transações |
+| 7 | `migrations/009_fix_rls.sql` | RLS completo |
+
+### Testes Mínimos
+
+- [ ] Criar cliente
+- [ ] Criar empréstimo vinculado ao cliente
+- [ ] Registrar pagamento
+- [ ] Confirmar RLS: usuário A não vê dados do usuário B
+
+### Troubleshooting
+
+| Erro | Causa provável | Solução |
+|------|----------------|---------|
+| column "id" does not exist | Migration anterior não rodou | Rode na ordem da tabela acima |
+| type "uuid" does not exist | Extensão removida, código antigo | Verifique se não há referência a UUID no código |
+| permission denied for schema finplan | GRANT faltando | Rode migrations/009_fix_rls.sql |
+| run_migrations.sh: permission denied | Sem permissão de execução | chmod +x run_migrations.sh |
+
+---
+
 ## 6. Como funciona o banco?
 
 O banco principal utiliza PostgreSQL.
@@ -339,10 +400,10 @@ referência.
 As variáveis de conexão com o banco são:
 
 ``` env
-FINPLAN_DB_HOST=127.0.0.1
+FINPLAN_DB_HOST=localhost
 FINPLAN_DB_PORT=5432
-FINPLAN_DB_NAME=finplan_homologacao
-FINPLAN_DB_USER=finplan_app
+FINPLAN_DB_NAME=finplan
+FINPLAN_DB_USER=postgres
 FINPLAN_DB_PASS=SUA_SENHA_LOCAL
 ```
 
@@ -372,6 +433,12 @@ pdo_pgsql
 
 Se `pdo_pgsql` não aparecer, será necessário habilitar a extensão no PHP
 utilizado.
+
+### Passo 3.1 --- Rodar Migrations
+
+```bash
+./run_migrations.sh
+```
 
 ### Passo 4 --- Iniciar os serviços
 
